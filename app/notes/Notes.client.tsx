@@ -2,9 +2,9 @@
 
 import css from "./NotesPage.module.css";
 
-import { fetchNotes } from "@/lib/api";
+import { fetchNotes, FetchNotesResponse } from "@/lib/api";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useDebounce } from "use-debounce";
+import { useDebouncedCallback } from "use-debounce";
 import { useState, useEffect } from "react";
 
 import SearchBox from "@/components/SearchBox/SearchBox";
@@ -16,18 +16,20 @@ import NoteForm from "@/components/NoteForm/NoteForm";
 import { MoonLoader } from "react-spinners";
 import { Toaster, toast } from "react-hot-toast";
 
-export default function NotesClient() {
+interface NotesClientProps {
+  initialData: FetchNotesResponse;
+}
+
+export default function NotesClient({ initialData }: NotesClientProps) {
   const [searchText, setSearchText] = useState<string>("");
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
 
-  const perPage = 12;
-  const [debouncedSearchText] = useDebounce(searchText, 300);
-
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["notes", debouncedSearchText, currentPage],
-    queryFn: () => fetchNotes(debouncedSearchText, currentPage, perPage),
+    queryKey: ["notes", searchText, currentPage],
+    queryFn: () => fetchNotes(searchText, currentPage),
     placeholderData: keepPreviousData,
+    initialData,
   });
 
   useEffect(() => {
@@ -36,10 +38,10 @@ export default function NotesClient() {
     }
   }, [isError]);
 
-  const handleSearchText = (newNote: string) => {
+  const handleSearchText = useDebouncedCallback((newNote: string) => {
     setCurrentPage(1);
     setSearchText(newNote);
-  };
+  }, 300);
 
   const toggleModal = () => {
     setModalOpen(!modalOpen);
